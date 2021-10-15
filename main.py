@@ -73,6 +73,9 @@ class HaigChessBot(ComponentsBot):
         print(self.ready_message)
         print(f"Running discord v{discord.__version__}!")
         SERVER = self.get_guild(SERVER_ID)
+        self.candidate_members.clear()
+        self.general_members.clear()
+        self.other_members.clear()
         await self.load_cms()
         await self.load_gms()
         self.other_members = read_from_json("OM.txt")["OMs"]
@@ -203,7 +206,30 @@ class HaigChessBot(ComponentsBot):
                     async with ctx.typing():
                         await gm.update_stats()
                         await ctx.send(embed=await gm.generate_stats())
+
                         return
+
+        @self.command()
+        @is_me
+        async def verify_member(ctx: commands.Context, member: discord.Member, last_func: int = 0):
+            if type(member) != discord.Member or member.bot or str(member.id) not in (j_load := read_from_json("CM.txt")).keys():
+                await ctx.send(embed=self.error_embed_builder("Invalid ID!"))
+                return
+
+            c = CandidateMember.CandidateMember(member, j_load[str(member.id)], last_func)
+            self.candidate_members.append(c)
+            await c.get_methods()[last_func](self)
+
+        @self.command()
+        @is_me
+        async def create_cm(ctx: commands.Context, member: discord.Member):
+            if type(member) != discord.Member or member.bot or str(member.id) in (j_load := read_from_json("CM.txt")).keys():
+                await ctx.send(embed=self.error_embed_builder("Invalid ID!"))
+                return
+
+            j_load[str(member.id)] = {}
+            write_to_json(j_load, "GM.txt")
+            await verify_member(ctx, member)
 
     def edit_c_id(self, count: int = 1) -> list[str]:
         self.custom_id += count
