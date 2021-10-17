@@ -211,6 +211,7 @@ class HaigChessBot(ComponentsBot):
                         profile = await get_player_profile(storage["username"].lower())
                         storage["stats"] = await get_player_stats(storage["username"].lower())
                         storage["joined"] = profile["joined"]
+                        storage["alt"] = None
                     member = [m for m in message.mentions if m.id != 325713620879147010][0]
                     gm = GeneralMember.GeneralMember(member, storage)
                     self.general_members.append(gm)
