@@ -8,6 +8,7 @@ from FileHandling import *
 from discord_components import ComponentsBot, Button
 import CandidateMember
 import GeneralMember
+from chesscom import get_player_profile, get_player_stats
 from MyChecks import is_me
 from typing import Optional
 
@@ -61,7 +62,6 @@ class HaigChessBot(ComponentsBot):
         self.custom_id = 0
         self.candidate_members: list[CandidateMember.CandidateMember] = []
         self.general_members: list[GeneralMember.GeneralMember] = []
-        self.other_members: list[int] = []
 
     async def on_message(self, message: discord.Message):
         if message.author == self.user:
@@ -75,10 +75,9 @@ class HaigChessBot(ComponentsBot):
         SERVER = self.get_guild(SERVER_ID)
         self.candidate_members.clear()
         self.general_members.clear()
-        self.other_members.clear()
+        await asyncio.sleep(5)
         await self.load_cms()
         await self.load_gms()
-        self.other_members = read_from_json("OM.txt")["OMs"]
         verifications = [a.get_methods()[a.last_func](self) for a in self.candidate_members]
         await asyncio.gather(*verifications, return_exceptions=True)
 
@@ -95,13 +94,13 @@ class HaigChessBot(ComponentsBot):
                 break
 
     async def on_member_join(self, member: discord.Member):
-        if str(member.id) in (j_load := read_from_json("GM.txt")).keys():
+        if str(member.id) in (j_load := read_from_json("GeneralMembers.txt")).keys():
             await member.add_roles(SERVER.get_role(GM_ID))
             g = GeneralMember.GeneralMember(member, j_load[str(member.id)])
             self.general_members.append(g)
             await self.update_accounts()
             return
-        if member.id in self.other_members:
+        if SERVER.get_role(NM_ID) in member.roles:
             await member.add_roles(SERVER.get_role(NM_ID))
             return
         if member.bot:
@@ -153,7 +152,7 @@ class HaigChessBot(ComponentsBot):
         @self.command()
         @commands.has_permissions(administrator=True)
         async def confirm(ctx: commands.Context, member_id: str):
-            j_load = read_from_json("CM.txt")
+            j_load = read_from_json("CandidateMembers.txt")
             if member_id not in j_load.keys():
                 await ctx.send(embed=self.error_embed_builder("User not found!"))
                 return
@@ -161,7 +160,7 @@ class HaigChessBot(ComponentsBot):
             gm = GeneralMember.GeneralMember(member, j_load[member_id])
             await member.add_roles(SERVER.get_role(GM_ID))
             del j_load[member_id]
-            write_to_json(j_load, "CM.txt")
+            write_to_json(j_load, "CandidateMembers.txt")
             self.general_members.append(gm)
             for m in self.candidate_members:
                 if m.member.id == int(member_id):
@@ -181,10 +180,47 @@ class HaigChessBot(ComponentsBot):
 
         @self.command()
         @is_me
+        async def retrieve_lost_data(ctx: commands.Context):
+            message: discord.Message
+            async for message in self.get_channel(VERIFICATION_CHANNEL_ID).history(limit=None):
+                embed = message.embeds[0]
+                if embed is None:
+                    continue
+                if message.author == self.user and not embed.description:
+                    storage: dict = {}
+                    if len(embed.fields) == 1:
+                        storage["name"] = None
+                        storage["email"] = None
+                        storage["grade"] = None
+                        storage["username"] = None
+                        storage["stats"] = None
+                        storage["joined"] = None
+                        storage["alt"] = embed.fields[0].value
+                    else:
+                        for field in embed.fields:
+                            if field.name == "Full Name":
+                                storage["name"] = field.value
+                            elif field.name == "Email":
+                                storage["email"] = field.value
+                            elif field.name == "Grade":
+                                storage["grade"] = field.value
+                            elif field.name == "Chess.com Username":
+                                storage["username"] = field.value
+                        profile = await get_player_profile(storage["username"].lower())
+                        storage["stats"] = await get_player_stats(storage["username"].lower())
+                        storage["joined"] = profile["joined"]
+                    member = [m for m in message.mentions if m.id != 325713620879147010][0]
+                    gm = GeneralMember.GeneralMember(member, storage)
+                    self.general_members.append(gm)
+
+
+
+        @self.command()
+        @is_me
         async def verify_all_members(ctx: commands.Context):
             coros = []
             for member in SERVER.members:
-                if member.id in self.other_members or member.bot:
+                if SERVER.get_role(NM_ID) in member.roles or member.bot:
                     continue
                 remove_roles: Optional[list[discord.Role]] = []
                 for role in member.roles:
@@ -212,7 +248,7 @@ class HaigChessBot(ComponentsBot):
         @self.command()
         @is_me
         async def verify_member(ctx: commands.Context, member: discord.Member, last_func: int = 0):
-            if type(member) != discord.Member or member.bot or str(member.id) not in (j_load := read_from_json("CM.txt")).keys():
+            if type(member) != discord.Member or member.bot or str(member.id) not in (j_load := read_from_json("CandidateMembers.txt")).keys():
                 await ctx.send(embed=self.error_embed_builder("Invalid ID!"))
                 return
 
@@ -223,12 +259,12 @@ class HaigChessBot(ComponentsBot):
         @self.command()
         @is_me
         async def create_cm(ctx: commands.Context, member: discord.Member):
-            if type(member) != discord.Member or member.bot or str(member.id) in (j_load := read_from_json("CM.txt")).keys():
+            if type(member) != discord.Member or member.bot or str(member.id) in (j_load := read_from_json("CandidateMembers.txt")).keys():
                 await ctx.send(embed=self.error_embed_builder("Invalid ID!"))
                 return
 
             j_load[str(member.id)] = {}
-            write_to_json(j_load, "GM.txt")
+            write_to_json(j_load, "CandidateMembers.txt")
             await verify_member(ctx, member)
 
     def edit_c_id(self, count: int = 1) -> list[str]:
@@ -244,15 +280,15 @@ class HaigChessBot(ComponentsBot):
         embed = discord.Embed(title="CHESS.COM ACCOUNTS", colour=discord.Colour.blurple())
         for member in self.general_members:
             embed.add_field(name=member.username, value=member.member.mention)
-        if len(await (ch := self.get_channel(CHESS_COM_CHANNEL_ID)).history().flatten()) == 0:
-            await ch.send(embed=embed)
+        ch = self.get_channel(CHESS_COM_CHANNEL_ID)
+        if ch is None:
             return
         async for message in ch.history():
             if message.author == self.user:
                 await message.edit(embed=embed)
 
     async def load_cms(self):
-        j_load = read_from_json("CM.txt")
+        j_load = read_from_json("CandidateMembers.txt")
         for key in j_load.keys():
             if not (member := SERVER.get_member(int(key))) or j_load[key]["is_verification_sent"]:
                 continue
@@ -266,7 +302,7 @@ class HaigChessBot(ComponentsBot):
                 CandidateMember.CandidateMember.forbidden.append(a)
 
     async def load_gms(self):
-        j_load = read_from_json("GM.txt")
+        j_load = read_from_json("GeneralMembers.txt")
         for key in j_load.keys():
             if not (member := SERVER.get_member(int(key))):
                 continue

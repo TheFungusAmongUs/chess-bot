@@ -59,9 +59,9 @@ class GeneralMember:
         self.storage["alt"] = self.alt
 
     def store_everything(self) -> None:
-        j_load = read_from_json("GM.txt")
+        j_load = read_from_json("GeneralMembers.txt")
         j_load[str(self.member.id)] = self.storage
-        write_to_json(j_load, "GM.txt")
+        write_to_json(j_load, "GeneralMembers.txt")
 
     def update_and_store(self) -> None:
         self.update_storage()

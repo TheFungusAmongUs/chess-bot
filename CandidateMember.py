@@ -1,3 +1,4 @@
+
 import asyncio
 from functools import wraps
 import discord
@@ -248,10 +249,10 @@ class CandidateMember:
         self.storage["is_verification_sent"] = self.is_verification_sent
 
     def store_everything(self) -> None:
-        j_load = read_from_json("CM.txt")
+        j_load = read_from_json("CandidateMembers.txt")
         j_load[str(self.member.id)] = self.storage
         print(self.storage)
-        write_to_json(j_load, "CM.txt")
+        write_to_json(j_load, "CandidateMembers.txt")
 
     def update_and_store(self) -> None:
         self.update_storage()
