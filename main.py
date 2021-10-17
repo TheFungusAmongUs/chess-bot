@@ -4,6 +4,8 @@ import discord_components
 from boto3 import Session
 import discord
 from discord.ext import commands
+
+import chesscom
 from FileHandling import *
 from discord_components import ComponentsBot, Button
 import CandidateMember
@@ -208,7 +210,12 @@ class HaigChessBot(ComponentsBot):
                                 storage["grade"] = field.value
                             elif field.name == "Chess.com Username":
                                 storage["username"] = field.value
-                        profile = await get_player_profile(storage["username"].lower())
+                        try:
+                            profile = await get_player_profile(storage["username"].lower())
+                        except chesscom.ChessComError as e:
+                            print(storage["username"])
+                            print(e.status_code)
+                            continue
                         storage["stats"] = await get_player_stats(storage["username"].lower())
                         storage["joined"] = profile["joined"]
                         storage["alt"] = None
