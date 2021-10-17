@@ -183,10 +183,12 @@ class HaigChessBot(ComponentsBot):
         async def retrieve_lost_data(ctx: commands.Context):
             message: discord.Message
             async for message in self.get_channel(VERIFICATION_CHANNEL_ID).history(limit=None):
+                if message.author != self.user:
+                    return
                 embed = message.embeds[0]
                 if embed is None:
                     continue
-                if message.author == self.user and not embed.description:
+                if not embed.description:
                     storage: dict = {}
                     if len(embed.fields) == 1:
                         storage["name"] = None
