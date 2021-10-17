@@ -212,8 +212,7 @@ class HaigChessBot(ComponentsBot):
                     member = [m for m in message.mentions if m.id != 325713620879147010][0]
                     gm = GeneralMember.GeneralMember(member, storage)
                     self.general_members.append(gm)
-
-
+            await self.update_accounts()
 
         @self.command()
         @is_me
@@ -280,12 +279,16 @@ class HaigChessBot(ComponentsBot):
         embed = discord.Embed(title="CHESS.COM ACCOUNTS", colour=discord.Colour.blurple())
         for member in self.general_members:
             embed.add_field(name=member.username, value=member.member.mention)
-        ch = self.get_channel(CHESS_COM_CHANNEL_ID)
+        ch: discord.TextChannel = self.get_channel(CHESS_COM_CHANNEL_ID)
         if ch is None:
+            return
+        if len(await ch.history().flatten()) == 0:
+            await ch.send(embed=embed)
             return
         async for message in ch.history():
             if message.author == self.user:
                 await message.edit(embed=embed)
+                return
 
     async def load_cms(self):
         j_load = read_from_json("CandidateMembers.txt")
