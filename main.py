@@ -184,7 +184,7 @@ class HaigChessBot(ComponentsBot):
             message: discord.Message
             async for message in self.get_channel(VERIFICATION_CHANNEL_ID).history(limit=None):
                 if message.author != self.user:
-                    return
+                    continue
                 embed = message.embeds[0]
                 if embed is None:
                     continue
