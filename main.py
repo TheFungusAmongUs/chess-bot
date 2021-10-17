@@ -219,8 +219,10 @@ class HaigChessBot(ComponentsBot):
         async def verify_all_members(ctx: commands.Context):
             coros = []
             for member in SERVER.members:
-                if SERVER.get_role(NM_ID) in member.roles or member.bot:
+                if SERVER.get_role(NM_ID) in member.roles or member.bot or str(member.id) in read_from_json("GeneralMembers.txt").keys():
                     continue
+                print(member)
+                '''
                 remove_roles: Optional[list[discord.Role]] = []
                 for role in member.roles:
                     if role.id in (EXEC_ID, EVERYONE_ID):
@@ -231,6 +233,7 @@ class HaigChessBot(ComponentsBot):
                 cm = CandidateMember.CandidateMember(member, {})
                 coros.append(cm.get_methods()[cm.last_func](self))
             await asyncio.gather(*coros)
+            '''
 
         @self.command()
         async def get_stats(ctx: commands.Context, member: discord.Member):
