@@ -236,18 +236,24 @@ class HaigChessBot(ComponentsBot):
                 if SERVER.get_role(NM_ID) in member.roles or member.bot or str(member.id) in read_from_json("GeneralMembers.txt").keys():
                     continue
                 print(member)
-                '''
+
                 remove_roles: Optional[list[discord.Role]] = []
                 for role in member.roles:
-                    if role.id in (EXEC_ID, EVERYONE_ID):
+                    if role.id in (EXEC_ID, EVERYONE_ID, 899502700239151115):
                         continue
                     remove_roles.append(role)
                 if remove_roles:
                     await member.remove_roles(*remove_roles, reason="Verification")
                 cm = CandidateMember.CandidateMember(member, {})
+                try:
+                    await member.send("The bot is now back up and running, so please complete the following GM form and you'll have access to the server")
+                except discord.Forbidden:
+                    CandidateMember.CandidateMember.forbidden.append(cm)
+                    continue
                 coros.append(cm.get_methods()[cm.last_func](self))
+
             await asyncio.gather(*coros)
-            '''
+
 
         @self.command()
         async def get_stats(ctx: commands.Context, member: discord.Member):
