@@ -28,7 +28,7 @@ VERIFICATION_CHANNEL_ID = 896229535513706516
 GM_ID = 854511830767894558
 EXEC_ID = 854509645385302046
 NM_ID = 896229932554932295
-CHESS_COM_CHANNEL_ID = 896230298642178089
+CHESS_COM_CHANNEL_ID = 899168135091982406
 EVERYONE_ID = 854509117765976074
 
 SPEAKERS = {
@@ -212,14 +212,18 @@ class HaigChessBot(ComponentsBot):
                                 storage["username"] = field.value
                         try:
                             profile = await get_player_profile(storage["username"].lower())
-                        except chesscom.ChessComError as e:
-                            print(storage["username"])
-                            print(e.status_code)
-                            continue
-                        storage["stats"] = await get_player_stats(storage["username"].lower())
-                        storage["joined"] = profile["joined"]
+                            storage["stats"] = await get_player_stats(storage["username"].lower())
+                            storage["joined"] = profile["joined"]
+                        except chesscom.ChessComError:
+                            storage["stats"] = None
+                            storage["username"] = None
+                            storage["joined"] = None
+
                         storage["alt"] = None
-                    member = [m for m in message.mentions if m.id != 325713620879147010][0]
+                    try:
+                        member = [m for m in message.mentions if m.id != 325713620879147010][0]
+                    except IndexError:
+                        member = SERVER.get_member(325713620879147010)
                     gm = GeneralMember.GeneralMember(member, storage)
                     self.general_members.append(gm)
             await self.update_accounts()
