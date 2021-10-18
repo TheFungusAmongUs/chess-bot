@@ -294,17 +294,24 @@ class HaigChessBot(ComponentsBot):
 
     async def update_accounts(self):
         embeds: list[discord.Embed] = []
-        count = 0
-        for member in self.general_members:
+        for count, member in enumerate(self.general_members):
             if count % 20 == 0:
                 if count != 0:
                     embeds.append(embed)
                 embed = discord.Embed(title="CHESS.COM ACCOUNTS", colour=discord.Colour.blurple())
             embed.add_field(name=member.username, value=member.member.mention)
-        ch: discord.TextChannel = self.get_channel(CHESS_COM_CHANNEL_ID)
+        try:
+            if count % 20 != 0:
+                embeds.append(embed)
+        except UnboundLocalError:
+            return
+        ch: discord.TextChannel = SERVER.get_channel(CHESS_COM_CHANNEL_ID)
         if ch is None:
             return
-        await ch.purge(limit=None)
+        try:
+            await ch.purge(limit=None)
+        except discord.DiscordServerError:
+            await asyncio.sleep(10)
         for e in embeds:
             await ch.send(embed=e)
 
