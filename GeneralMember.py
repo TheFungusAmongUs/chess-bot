@@ -20,11 +20,8 @@ class GeneralMember:
 
     async def modify_username(self, new_username: str) -> bool:
         new_username = new_username.strip().lower()
-        try:
-            stats: dict = await get_player_stats(new_username)
-            account: dict = await get_player_profile(new_username)
-        except ChessComError:
-            return False
+        stats: dict = await get_player_stats(new_username)
+        account: dict = await get_player_profile(new_username)
 
         self.username = new_username
         self.stats = stats

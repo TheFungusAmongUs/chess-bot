@@ -254,6 +254,18 @@ class HaigChessBot(ComponentsBot):
 
             await asyncio.gather(*coros)
 
+        @self.command()
+        @commands.has_permissions(administrator=True)
+        async def modify_username(ctx: commands.Context, member: discord.Member, username: str):
+            gm = self.get_alt_with_id(member.id)
+            if not gm:
+                await ctx.send(embed=self.error_embed_builder("Member not found!"))
+                return
+            try:
+                await gm.modify_username(username)
+            except ChessComError as e:
+                await ctx.send(embed=self.error_embed_builder(f"No account found called {username}: {e.message}"))
+                return
 
         @self.command()
         async def get_stats(ctx: commands.Context, member: discord.Member):
